@@ -55,10 +55,12 @@ class Node{
         bool has_leaf()
         {
             return composite_flag & leaf_mask;
+            // return false;
         }
         bool has_prefetched()
         {
             return composite_flag & prefetch_mask;
+            // return true;
         }
         void prefetched()
         {
@@ -86,17 +88,18 @@ public:
     void pipeline_retrain(size_t distance, int way);
     bool get(key_t key);
     bool put(key_t key, val_t val);
+    bool insert(key_t key, val_t val, int &lookup_time, int &move_time);
     bool insert(key_t key, val_t val);
     bool check();
     size_t count_leaf();
 
     //size_t middle_search(key_t key);
-    size_t upper_less(key_t key);
-    std::vector<record_t> data;
+    int upper_less(key_t key);
+    //std::vector<record_t> data;
 
 
 private:
-    // std::vector<record_t> data;
+    std::vector<record_t> data;
     LinearRegressionModel<key_t> lr_model;
 
 };

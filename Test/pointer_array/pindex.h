@@ -12,13 +12,15 @@ public:
     pindex()    {}
     void build(std::vector<key_t> keys, std::vector<val_t> vals, size_t num);
     void normal_retrain();
-    void pipeline_retrain(size_t distance, int way);
+    void pipeline_retrain(size_t distance);
     bool get(key_t key);
     bool put(key_t key, val_t val);
+    bool insert(key_t key, val_t val, int &lookup_time, int &move_time);
     bool insert(key_t key, val_t val);
     bool check();
     void count_leaf();
-    size_t get_pos(key_t key);
+    int get_pos(key_t key);
+    void insert_time(std::vector<key_t> keys);
 
 private:
     LinearRegressionModel<key_t> lr_model_root;

@@ -15,33 +15,38 @@ inline Node<key_t, val_t>::Node(std::vector<key_t> keys, std::vector<val_t> vals
         record.val.composite_flag = 0;
         data.push_back(record);
     }
-    train();
+    lr_model.train(keys);
 }
 
 template<class key_t, class val_t>
 inline Node<key_t, val_t>::Node(std::vector<key_t> keys, std::vector<val_t> vals, size_t start, size_t end)
-{
+{   
+    std::vector<key_t> keyss;
     for(size_t i = start; i < end; i++)
     {
         record_t record(keys[i], vals[i]);
         record.val.leaf = NULL;
         record.val.composite_flag = 0;
         data.push_back(record);
+        keyss.push_back(keys[i]);
     }
-    train();
+    lr_model.train(keyss);
 }
 
 
 template<class key_t, class val_t>
-size_t Node<key_t, val_t>::upper_less(key_t key)
+int Node<key_t, val_t>::upper_less(key_t key)
 {
     size_t pos = lr_model.predict(key);
     size_t maxErr = lr_model.get_maxErr();
     int start = (int)(pos - maxErr) < 0 ? 0 : pos - maxErr;
+    if(start < 0)
+        start = 0;
     if(start >= data.size())
         start = data.size() - 1;
     size_t end = pos + maxErr > data.size() - 1 ? data.size() - 1 : pos + maxErr;
-    size_t get_pos = -1;
+    int get_pos = -1;
+
     
     while(start <= end)
     {
@@ -156,34 +161,86 @@ bool Node<key_t, val_t>::put(key_t key, val_t val)
 }
 
 template<class key_t, class val_t>
+bool Node<key_t, val_t>::insert(key_t key, val_t val, int &lookup_time, int &move_time)
+{
+    uint64_t t1 = perf_counter();
+	int insert_pos = upper_less(key);
+    if(insert_pos == -1)
+        return false;
+    
+    if(!data[insert_pos].val.has_leaf()){
+        uint64_t t2 = perf_counter();
+	    lookup_time = (t2 - t1) * 1e6 / 2904002;
+         
+        uint64_t t3 = perf_counter();
+
+        data[insert_pos].val.leaf = new std::vector<record_t>;
+        record_t rec = {key, val};
+        data[insert_pos].val.leaf->push_back(rec);
+        data[insert_pos].val.composite_flag = 1;
+        
+        uint64_t t4 = perf_counter();
+        move_time = (t4 - t3) * 1e6 / 2904002;
+
+        return true;
+    }
+    else{
+        std::vector<record_t> &v =  *data[insert_pos].val.leaf;
+
+        int startx = 0;
+        int endx = v.size()-1;
+        int posx = -1;
+        while(startx <= endx)
+        {
+            int midx = (startx + endx) / 2;
+            if(v[midx].key <= key){
+                posx = midx;
+                startx = midx + 1;
+            }
+            else{
+                endx = midx - 1;
+            }
+        }
+
+
+        uint64_t t5 = perf_counter();
+        lookup_time = (t5 - t1) * 1e6 / 2904002;
+
+        uint64_t t7 = perf_counter();
+
+        record_t rec = {key, val};
+        data[insert_pos].val.leaf->insert(data[insert_pos].val.leaf->begin() + posx + 1, rec);
+
+        uint64_t t8 = perf_counter();
+        move_time = (t8 - t7) * 1e6 / 2904002;
+        return true;
+    }
+    return false;
+}
+
+
+template<class key_t, class val_t>
 bool Node<key_t, val_t>::insert(key_t key, val_t val)
 {
-    size_t insert_pos = upper_less(key);
-    // std::cout << "insert_pos: "<< insert_pos << std::endl;
-    // std::cout << "has leaf? " << data[insert_pos].val.has_leaf() << std::endl;
-    // std::cout << "before has leaf? " << data[insert_pos - 1].val.has_leaf() << std::endl;
-    // std::cout << "after  has leaf? " << data[insert_pos+1].val.has_leaf() << std::endl;
-
+	int insert_pos = upper_less(key);
+    if(insert_pos == -1)
+        return false;
+    
     if(!data[insert_pos].val.has_leaf()){
         data[insert_pos].val.leaf = new std::vector<record_t>;
         record_t rec = {key, val};
         data[insert_pos].val.leaf->push_back(rec);
         data[insert_pos].val.composite_flag = 1;
-        // std::cout << "leaf first size: " << data[insert_pos].val.leaf->size() << std::endl;
-        // std::vector<record_t> &v =  *data[insert_pos].val.leaf;
-        // std::cout << "leaf first key: " << v[0].key << std::endl;
         return true;
     }
     else{
         std::vector<record_t> &v =  *data[insert_pos].val.leaf;
-        // std::cout << "leaf second size: " << v.size() << std::endl;
-        // std::cout << "leaf second key: " << v[0].key << std::endl;
-        size_t startx = 0;
-        size_t endx = v.size()-1;
-        size_t posx = 0;
+        int startx = 0;
+        int endx = v.size()-1;
+        int posx = -1;
         while(startx <= endx)
         {
-            size_t midx = (startx + endx) / 2;
+            int midx = (startx + endx) / 2;
             if(v[midx].key <= key){
                 posx = midx;
                 startx = midx + 1;
@@ -259,7 +316,7 @@ void Node<key_t, val_t>::normal_retrain()
 {
     double x_expected = 0, y_expected = 0, xy_expected = 0,
         x_square_expected = 0;
-    size_t position = -1;
+    int position = -1;
     for(size_t i = 0; i < data.size(); i++)
     {
         double key = data[i].key;
@@ -294,6 +351,8 @@ void Node<key_t, val_t>::normal_retrain()
         (x_square_expected - x_expected * x_expected);
     lr_model.set_weight0(weight0);
     lr_model.set_weight1(weight1);
+    //lr_model.print_weights();
+    //return position;
 }
 
 
@@ -302,7 +361,7 @@ void Node<key_t, val_t>::pipeline_retrain(size_t distance, int way)
 {
     double x_expected = 0, y_expected = 0, xy_expected = 0,
         x_square_expected = 0;
-    size_t position = -1;
+    int position = -1;
     for(size_t i = 0; i < data.size(); i++)
     {   
         //方式一，固定距离取指针
@@ -398,3 +457,4 @@ void Node<key_t, val_t>::pipeline_retrain(size_t distance, int way)
 }
 
 #endif
+

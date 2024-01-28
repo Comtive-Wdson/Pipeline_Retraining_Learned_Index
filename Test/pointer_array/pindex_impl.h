@@ -14,11 +14,6 @@ void pindex<key_t, val_t>::build(std::vector<key_t> keys, std::vector<val_t> val
         size_t end = i == num-1 ? keys.size() : start + chunck_size;
 
         pivots.push_back(keys[start]);
-        // if(i == 46)
-        //     std::cout << "46 last; " << keys[end-1] << std::endl;
-        // if(i == 47)
-        //     std::cout << "47 first" << keys[start] << std::endl;
-        // if(i == 46)
         Node<key_t, val_t> node(keys, vals, start, end);
         nodes.push_back(node);
     }
@@ -27,13 +22,17 @@ void pindex<key_t, val_t>::build(std::vector<key_t> keys, std::vector<val_t> val
 
 
 template<class key_t, class val_t>
-size_t pindex<key_t, val_t>::get_pos(key_t key)
+int pindex<key_t, val_t>::get_pos(key_t key)
 {
     size_t pos = lr_model_root.predict(key);
     size_t maxErr = lr_model_root.get_maxErr();
     int start = (int)(pos - maxErr) < 0 ? 0 : pos - maxErr;
+    if(start < 0)
+        start = 0;
+    if(start >= pivots.size())
+        start = pivots.size() - 1;
     size_t end = pos + maxErr > pivots.size() - 1 ? pivots.size() - 1 : pos + maxErr;
-    size_t position = -1;
+    int position = -1;
     
     while(start <= end)
     {
@@ -67,25 +66,42 @@ size_t pindex<key_t, val_t>::get_pos(key_t key)
 template<class key_t, class val_t>
 bool pindex<key_t, val_t>::get(key_t key)
 {
-    size_t position = get_pos(key);
-    return nodes[position].get(key);
+    int position = get_pos(key);
+    if(position == -1)
+        return false;
+    else
+        return nodes[position].get(key);
 }
 
 template<class key_t, class val_t>
 bool pindex<key_t, val_t>::put(key_t key, val_t val)
 {
-    size_t position = get_pos(key);
-    return nodes[position].put(key, val);
+    int position = get_pos(key);
+    if(position == -1)
+        return false;
+    else
+        return nodes[position].put(key, val);
+}
+
+template<class key_t, class val_t>
+bool pindex<key_t, val_t>::insert(key_t key, val_t val, int &lookup_time, int &move_time)
+{
+    int position = get_pos(key);
+    if(position == -1)
+        return false;
+    else
+        return nodes[position].insert(key, val, lookup_time, move_time);
 }
 
 template<class key_t, class val_t>
 bool pindex<key_t, val_t>::insert(key_t key, val_t val)
 {
-    size_t position = get_pos(key);
-    //std::cout << position << std::endl;
-    return nodes[position].insert(key, val);
+    int position = get_pos(key);
+    if(position == -1)
+        return false;
+    else
+        return nodes[position].insert(key, val);
 }
-
 
 template<class key_t, class val_t>
 void pindex<key_t, val_t>::normal_retrain()
@@ -95,10 +111,10 @@ void pindex<key_t, val_t>::normal_retrain()
 }
 
 template<class key_t, class val_t>
-void pindex<key_t, val_t>::pipeline_retrain(size_t distance, int way)
+void pindex<key_t, val_t>::pipeline_retrain(size_t distance)
 {
     for(int i = 0; i < pivots.size(); i++)
-        nodes[i].pipeline_retrain(distance, way);
+        nodes[i].pipeline_retrain(distance);
 }
 
 
@@ -112,29 +128,26 @@ bool pindex<key_t, val_t>::check()
 }
 
 template<class key_t, class val_t>
-void pindex<key_t, val_t>::count_leaf()
-{
-    int count_node = 0;
-    int count_leaf = 0;
-    for(int i = 0; i < nodes.size(); i++)
+void pindex<key_t, val_t>::insert_time(std::vector<key_t> keys)
+{   
+    int lookup_time = 0;
+    int move_time = 0;
+    int insert_time = 0;
+    for(size_t i = 0; i < keys.size(); i++)
     {
-        if(i >= 45 && i <= 48)
-            std::cout << nodes[i].data.size() << std::endl;
-        int countx = nodes[i].count_leaf();
-        if(countx > 0)
-        {
-            count_node += 1;
-            count_leaf += countx;
-        }
+        int t1 = 0;
+        int t2 = 0;
+        bool f = insert(keys[i], 1, t1, t2);
+        lookup_time += t1;
+        move_time += t2;
+        insert_time = insert_time + t1 + t2;
+        // std::cout << "t1: " << t1 << std::endl;
+        // std::cout << "t2: " << t2 << std::endl << std::endl;
     }
-    std::cout << "count_leaf: " << count_leaf << std::endl;
-    std::cout << "count_node: " << count_node << std::endl;
 
-    std::cout << "check_leaf: " << nodes[46].data[71].val.has_leaf() << std::endl;
-     std::cout << "check_leaf2: " << nodes[46].data[71].val.composite_flag << std::endl;
-     std::cout << "check_leaf3: " << nodes[46].count_leaf() << std::endl;
+    std::cout << "pointer array lookup time: " << lookup_time  / keys.size() << std::endl;
+    std::cout << "pointer array move time: " << move_time  / keys.size() << std::endl;
+    std::cout << "pointer array insert time: " << insert_time  / keys.size() << std::endl;
 }
-
-
 
 #endif

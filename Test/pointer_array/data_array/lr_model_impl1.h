@@ -1,28 +1,28 @@
 #pragma once
-#ifndef __LR_MODEL_IMPL_H__
-#define __LR_MODEL_IMPL_H__
-#include "lr_model.h"
+#ifndef __LR_MODEL_IMPL1_H__
+#define __LR_MODEL_IMPL1_H__
+#include "lr_model1.h"
 #include<sys/time.h>
-#include "function.h"
+#include "../function.h"
 #include <fstream>
 #include <xmmintrin.h>
 
 template<class key_t>
-inline LinearRegressionModel<key_t>::LinearRegressionModel() {}
+inline LinearRegressionModel1<key_t>::LinearRegressionModel1() {}
 
 template<class key_t>
-inline LinearRegressionModel<key_t>::LinearRegressionModel(double w, double b)
+inline LinearRegressionModel1<key_t>::LinearRegressionModel1(double w, double b)
 {
-    weights[0] = w;
-    weights[1] = b;
+    weights1[0] = w;
+    weights1[1] = b;
 }
 
 template<class key_t>
-LinearRegressionModel<key_t>::~LinearRegressionModel() {}
+LinearRegressionModel1<key_t>::~LinearRegressionModel1() {}
 
 
 template<class key_t>
-void LinearRegressionModel<key_t>::train(const typename std::vector<key_t>::const_iterator& it, size_t size)
+void LinearRegressionModel1<key_t>::train1(const typename std::vector<key_t>::const_iterator& it, size_t size)
 {
     std::vector<key_t> trainkeys(size);
     std::vector<size_t> positions(size);
@@ -35,7 +35,7 @@ void LinearRegressionModel<key_t>::train(const typename std::vector<key_t>::cons
 
 
 template<class key_t>
-void LinearRegressionModel<key_t>::train(std::vector<key_t>& keys,
+void LinearRegressionModel1<key_t>::train1(std::vector<key_t>& keys,
     std::vector<size_t>& positions)
 {
     assert(keys.size() == positions.size());
@@ -49,8 +49,8 @@ void LinearRegressionModel<key_t>::train(std::vector<key_t>& keys,
 
     if (positions.size() == 0) return;
     if (positions.size() == 1) {
-        weights[0] = 0;
-        weights[1] = positions[0];
+        weights1[0] = 0;
+        weights1[1] = positions[0];
         return;
     }
     // use multiple dimension LR when running tpc-c
@@ -88,63 +88,63 @@ void LinearRegressionModel<key_t>::train(std::vector<key_t>& keys,
     x_square_expected /= positions.size();
     xy_expected /= positions.size();
 
-    weights[0] = (xy_expected - x_expected * y_expected) /
+    weights1[0] = (xy_expected - x_expected * y_expected) /
         (x_square_expected - x_expected * x_expected);
-    weights[1] = (x_square_expected * y_expected - x_expected * xy_expected) /
+    weights1[1] = (x_square_expected * y_expected - x_expected * xy_expected) /
         (x_square_expected - x_expected * x_expected);
-    maxErr = max_error(keys, positions);
+    maxErr1 = max_error1(keys, positions);
 }
 
 
 
 template <class key_t>
-void LinearRegressionModel<key_t>::train(std::vector<key_t>& keys)
+void LinearRegressionModel1<key_t>::train1(std::vector<key_t>& keys)
 {
     std::vector<size_t> positions(keys.size());
     for (size_t i = 0; i < keys.size(); i++)
     {
         positions[i] = i;
     }
-    train(keys, positions);
+    train1(keys, positions);
 }
 
 
 
 template<class key_t>
-void LinearRegressionModel<key_t>::print_weights() const {
-    //std::cout << "Weight[0]: " << weights[0] << " ,weight[1]: " << weights[1] << std::endl;
+void LinearRegressionModel1<key_t>::dprint_weights1() const {
+    std::cout << "Weight[0]: " << weights1[0] << " ,weight[1]: " << weights1[1] << std::endl;
 }
 
 // ============ prediction ==============
 template <class key_t>
-size_t LinearRegressionModel<key_t>::predict(const key_t& key) const {
+size_t LinearRegressionModel1<key_t>::predict1(const key_t& key) const {
     double model_key = key;
-    double res = weights[0] * model_key + weights[1];
+    double res = weights1[0] * model_key + weights1[1];
     return res > 0 ? res : 0;
 }
 
 template <class key_t>
-std::vector<size_t> LinearRegressionModel<key_t>::predict(const std::vector<key_t>& keys) const
+std::vector<size_t> LinearRegressionModel1<key_t>::predict1(const std::vector<key_t>& keys) const
 {
     assert(keys.size() > 0);
     std::vector<size_t> pred(keys.size());
     for (int i = 0; i < keys.size(); i++)
     {
-        pred[i] = predict(keys[i]);
+        pred[i] = predict1(keys[i]);
     }
     return pred;
 }
 
 // =========== max__error ===========
 template <class key_t>
-size_t LinearRegressionModel<key_t>::max_error(
+size_t LinearRegressionModel1<key_t>::max_error1(
     const typename std::vector<key_t>::const_iterator& keys_begin,
     uint32_t size) {
     size_t max = 0;
 
     for (size_t key_i = 0; key_i < size; ++key_i) {
         long long int pos_actual = key_i;
-        long long int pos_pred = predict(*(keys_begin + key_i));
+        long long int pos_pred = predict1(*(keys_begin + key_i));
         int error = std::abs(pos_actual - pos_pred);
         if (error > max) {
             max = error;
@@ -154,14 +154,14 @@ size_t LinearRegressionModel<key_t>::max_error(
 }
 
 template <class key_t>
-size_t LinearRegressionModel<key_t>::max_error(const std::vector<key_t>& keys,
+size_t LinearRegressionModel1<key_t>::max_error1(const std::vector<key_t>& keys,
     const std::vector<size_t>& positions)
 {
     size_t max = 0;
 
     for (size_t key_i = 0; key_i < keys.size(); ++key_i) {
         long long int pos_actual = positions[key_i];
-        long long int pos_pred = predict(keys[key_i]);
+        long long int pos_pred = predict1(keys[key_i]);
         //std::cout << "actual: " << pos_actual << "pred: " << pos_pred << std::endl;
         int error = std::abs(pos_actual - pos_pred);
         if (error > max) {
@@ -173,18 +173,18 @@ size_t LinearRegressionModel<key_t>::max_error(const std::vector<key_t>& keys,
 
 
 template<class key_t>
-int LinearRegressionModel<key_t>::search(std::vector<key_t>& keys, const key_t key)
+int LinearRegressionModel1<key_t>::search(std::vector<key_t>& keys, const key_t key)
 {
      //std::cout << std::endl << std::endl;
-    size_t pos = predict(key);
+    size_t pos = predict1(key);
     if (pos >= 0 && pos < keys.size() && keys[pos] == key)
     {
         return (int)pos;
     }
     else
     {
-        int start = (int)(pos - maxErr) < 0 ? 0 : pos - maxErr;
-        size_t end = pos + maxErr > keys.size() - 1 ? keys.size() - 1 : pos + maxErr;
+        int start = (int)(pos - maxErr1) < 0 ? 0 : pos - maxErr1;
+        size_t end = pos + maxErr1 > keys.size() - 1 ? keys.size() - 1 : pos + maxErr1;
 
         while (start <= end)
         {
@@ -216,7 +216,7 @@ int LinearRegressionModel<key_t>::search(std::vector<key_t>& keys, const key_t k
     }
 }
 // template<class key_t>
-// uint64_t LinearRegressionModel<key_t>::search(std::vector<key_t>& keys, const key_t key)
+// uint64_t LinearRegressionModel1<key_t>::search(std::vector<key_t>& keys, const key_t key)
 // {
 //     //clean_buffer();
 //     uint64_t t1 = perf_counter();
@@ -239,8 +239,8 @@ int LinearRegressionModel<key_t>::search(std::vector<key_t>& keys, const key_t k
 //     }
 //     else
 //     {
-//         int start = (int)(pos - maxErr) < 0 ? 0 : pos - maxErr;
-//         size_t end = pos + maxErr > keys.size() - 1 ? keys.size() - 1 : pos + maxErr;
+//         int start = (int)(pos - maxErr1) < 0 ? 0 : pos - maxErr1;
+//         size_t end = pos + maxErr1 > keys.size() - 1 ? keys.size() - 1 : pos + maxErr1;
 //         while (start <= end)
 //         {   
 //             //t3 = perf_counter();
@@ -280,7 +280,7 @@ int LinearRegressionModel<key_t>::search(std::vector<key_t>& keys, const key_t k
 
 
 template<class key_t>
-double LinearRegressionModel<key_t>::hit_ratio_calculate(std::vector<key_t>& keys)
+double LinearRegressionModel1<key_t>::hit_ratio_calculate(std::vector<key_t>& keys)
 {
     int hit = 0;
     for (size_t i = 0; i < keys.size(); i++)
@@ -294,7 +294,7 @@ double LinearRegressionModel<key_t>::hit_ratio_calculate(std::vector<key_t>& key
 }
 
 template<class key_t>
-size_t LinearRegressionModel<key_t>::error_calculate(std::vector<key_t>& keys)
+size_t LinearRegressionModel1<key_t>::error_calculate(std::vector<key_t>& keys)
 {
     size_t error_mean = 0;
     for (size_t i = 0; i < keys.size(); i++)
@@ -309,7 +309,7 @@ size_t LinearRegressionModel<key_t>::error_calculate(std::vector<key_t>& keys)
 }
 
 template<class key_t>
-long LinearRegressionModel<key_t>::train_time_calculate(std::vector<key_t>& keys)
+long LinearRegressionModel1<key_t>::train_time_calculate(std::vector<key_t>& keys)
 {
         uint64_t t1 = perf_counter();
         train(keys);
@@ -320,7 +320,7 @@ long LinearRegressionModel<key_t>::train_time_calculate(std::vector<key_t>& keys
 }
 
 template<class key_t>
-long LinearRegressionModel<key_t>::search_time_calculate(std::vector<key_t>& keys)
+long LinearRegressionModel1<key_t>::search_time_calculate(std::vector<key_t>& keys)
 {
 	long endtime = 0;
 	for (size_t i = 0; i < keys.size(); i++)
@@ -335,7 +335,7 @@ long LinearRegressionModel<key_t>::search_time_calculate(std::vector<key_t>& key
 }
 
 template<class key_t>
-long LinearRegressionModel<key_t>::random_search_time_calculate(std::vector<key_t>& keys)
+long LinearRegressionModel1<key_t>::random_search_time_calculate(std::vector<key_t>& keys)
 {  
       long endtime_sum = 0;
 	size_t end = 170000000;
@@ -352,7 +352,7 @@ long LinearRegressionModel<key_t>::random_search_time_calculate(std::vector<key_
 }
 
 template<class key_t>
-long LinearRegressionModel<key_t>::throughput(std::vector<key_t>& keys)
+long LinearRegressionModel1<key_t>::throughput(std::vector<key_t>& keys)
 {
     long endtime = 0;
         for (size_t i = 0; i < keys.size(); i++)
@@ -368,7 +368,7 @@ long LinearRegressionModel<key_t>::throughput(std::vector<key_t>& keys)
 }
 
 template<class key_t>
-double LinearRegressionModel<key_t>::random_throughput(std::vector<key_t>& keys)
+double LinearRegressionModel1<key_t>::random_throughput(std::vector<key_t>& keys)
 {  
       long endtime_sum = 0;
 	size_t end = 170000000;
@@ -385,7 +385,7 @@ double LinearRegressionModel<key_t>::random_throughput(std::vector<key_t>& keys)
 }
 
 template<class key_t>
-void LinearRegressionModel<key_t>::test(std::vector<key_t>& keys)
+void LinearRegressionModel1<key_t>::test(std::vector<key_t>& keys)
 {
     std::cout << "predict: " << predict_count / 1e5<< std::endl;
     std::cout << "search:  " << search_count / 1e5<< std::endl;
